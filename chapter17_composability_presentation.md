@@ -51,24 +51,41 @@ class BLTMaker:
 
 # 良い例: ポリシーとメカニズムを分離
 class IngredientPreparator:
-    def cook_bacon(self): pass
-    def prepare_lettuce(self): pass
-    def slice_tomato(self): pass
+    """食材の準備を担当するクラス（メカニズム）"""
+    def cook_bacon(self): 
+        """ベーコンを調理する"""
+        pass
+    
+    def prepare_lettuce(self): 
+        """レタスを準備する"""
+        pass
+    
+    def slice_tomato(self): 
+        """トマトをスライスする"""
+        pass
 
 class SandwichAssembler:
-    def assemble(self, *ingredients): pass
+    """サンドイッチを組み立てるクラス（メカニズム）"""
+    def assemble(self, *ingredients): 
+        """材料を組み立ててサンドイッチを作る"""
+        pass
 
 class BLTRecipe:
+    """BLTサンドイッチのレシピ（ポリシー）"""
     def __init__(self, preparator, assembler):
+        # 依存性注入：具体的な実装に依存しない
         self.preparator = preparator
         self.assembler = assembler
     
     def make(self):
+        """BLTサンドイッチを作る手順を定義"""
+        # レシピに従って材料を準備
         ingredients = [
-            self.preparator.cook_bacon(),
-            self.preparator.prepare_lettuce(),
-            self.preparator.slice_tomato()
+            self.preparator.cook_bacon(),      # ベーコン
+            self.preparator.prepare_lettuce(), # レタス
+            self.preparator.slice_tomato()     # トマト
         ]
+        # 組み立てて完成
         return self.assembler.assemble(*ingredients)
 ```
 
@@ -105,25 +122,31 @@ grep -i "ERROR" log.txt | cut -f 3,5 | sort -r
 
 ### 関数の組み合わせ
 ```python
-# 基本的な関数
+# 基本的な関数（再利用可能な小さな単位）
 def add(x, y):
+    """2つの数値を加算する"""
     return x + y
 
 def multiply(x, y):
+    """2つの数値を乗算する"""
     return x * y
 
 def square(x):
+    """数値を2乗する（既存の関数を再利用）"""
     return multiply(x, x)
 
 # 高階関数による組み合わせ
 def compose(f, g):
+    """関数合成：f(g(x))を実行する高階関数"""
     return lambda x: f(g(x))
 
 # 使用例
 def add_five(x):
+    """5を加算する特化関数"""
     return add(x, 5)
 
 def square_then_add_five(x):
+    """2乗してから5を加算する合成関数"""
     return compose(add_five, square)(x)
 
 # 関数型スタイル
@@ -131,6 +154,9 @@ from functools import reduce
 from operator import add
 
 def sum_of_squares(numbers):
+    """数値リストの各要素を2乗して合計する"""
+    # map(square, numbers): 各要素を2乗
+    # reduce(add, ...): 全てを加算
     return reduce(add, map(square, numbers))
 ```
 
@@ -138,23 +164,28 @@ def sum_of_squares(numbers):
 ```python
 # 純粋関数: 副作用なし、同じ入力に対して同じ出力
 def calculate_tax(amount, rate):
+    """税金を計算する純粋関数"""
     return amount * rate
 
 # 不純な関数: 副作用あり
 class TaxCalculator:
+    """状態を持つ不純な税金計算器"""
     def __init__(self):
-        self.total_collected = 0
+        self.total_collected = 0  # 状態を保持
     
     def calculate_tax(self, amount, rate):
+        """税金を計算し、同時に累計を更新（副作用）"""
         tax = amount * rate
-        self.total_collected += tax  # 副作用
+        self.total_collected += tax  # 副作用：状態を変更
         return tax
 
 # 組み合わせ可能な設計
 def calculate_total_with_tax(amount, tax_rate, discount_rate=0):
-    discounted_amount = amount * (1 - discount_rate)
-    tax = calculate_tax(discounted_amount, tax_rate)
-    return discounted_amount + tax
+    """割引と税金を適用した合計を計算"""
+    # 段階的な計算：各ステップが純粋関数
+    discounted_amount = amount * (1 - discount_rate)  # 割引適用
+    tax = calculate_tax(discounted_amount, tax_rate)   # 税金計算
+    return discounted_amount + tax                      # 合計計算
 ```
 
 ---
@@ -163,10 +194,12 @@ def calculate_total_with_tax(amount, tax_rate, discount_rate=0):
 
 ### アルゴリズムの分解
 ```python
-# 悪い例: 単一の大きな関数
+# 悪い例: 単一の大きな関数（モノリシック）
 def process_orders(orders):
+    """注文を処理する単一の大きな関数"""
     result = []
     for order in orders:
+        # 複数の条件とロジックが混在
         if order.status == 'pending' and order.total > 100:
             discounted_total = order.total * 0.9
             if discounted_total > 50:
@@ -181,29 +214,39 @@ def process_orders(orders):
 
 # 良い例: 組み合わせ可能なアルゴリズム
 def is_eligible_order(order):
+    """注文が処理対象かどうかを判定"""
     return order.status == 'pending' and order.total > 100
 
 def apply_discount(total, discount_rate=0.1):
+    """割引を適用する"""
     return total * (1 - discount_rate)
 
 def calculate_tax(amount, tax_rate=0.1):
+    """税金を計算する"""
     return amount * tax_rate
 
 def meets_minimum_threshold(amount, threshold=50):
+    """最小閾値を満たしているかチェック"""
     return amount > threshold
 
 def process_single_order(order):
+    """単一の注文を処理する"""
+    # 早期リターン：対象外の場合
     if not is_eligible_order(order):
         return None
     
+    # 割引適用
     discounted_total = apply_discount(order.total)
     
+    # 最小閾値チェック
     if not meets_minimum_threshold(discounted_total):
         return None
     
+    # 税金計算と最終合計
     tax = calculate_tax(discounted_total)
     final_total = discounted_total + tax
     
+    # 結果を構築
     return {
         'id': order.id,
         'total': final_total,
@@ -211,6 +254,8 @@ def process_single_order(order):
     }
 
 def process_orders(orders):
+    """複数の注文を処理する"""
+    # ジェネレータ式とリスト内包表記を使用
     return [
         result for result in 
         (process_single_order(order) for order in orders)
@@ -222,30 +267,42 @@ def process_orders(orders):
 ```python
 from typing import Iterator, Callable, TypeVar
 
-T = TypeVar('T')
-U = TypeVar('U')
+T = TypeVar('T')  # 入力の型
+U = TypeVar('U')  # 出力の型
 
 def filter_items(items: Iterator[T], predicate: Callable[[T], bool]) -> Iterator[T]:
+    """条件に合致するアイテムのみを返すフィルタ"""
     return filter(predicate, items)
 
 def transform_items(items: Iterator[T], transformer: Callable[[T], U]) -> Iterator[U]:
+    """各アイテムを変換する"""
     return map(transformer, items)
 
 def take(items: Iterator[T], n: int) -> Iterator[T]:
+    """最初のn個のアイテムのみを取得"""
     for i, item in enumerate(items):
         if i >= n:
             break
         yield item
 
-# 組み合わせ例
+# 組み合わせ例：データ処理パイプライン
 def process_data_pipeline(data):
-    return take(
-        transform_items(
-            filter_items(data, lambda x: x > 0),
-            lambda x: x ** 2
+    """データ処理のパイプライン"""
+    return take(                               # 最初の10個を取得
+        transform_items(                       # 各値を2乗
+            filter_items(                      # 正の値のみフィルタ
+                data, 
+                lambda x: x > 0               # 条件：正の値
+            ),
+            lambda x: x ** 2                  # 変換：2乗
         ),
-        10
+        10                                    # 取得数：10個
     )
+
+# 使用例
+numbers = [1, -2, 3, -4, 5, 6, -7, 8, 9, 10, 11, 12]
+result = list(process_data_pipeline(numbers))
+# 結果: [1, 9, 25, 36, 64, 81, 100, 121, 144] (最初の10個の正の値の2乗)
 ```
 
 ---
@@ -267,26 +324,35 @@ def process_data_pipeline(data):
 ```python
 # 1. 小さな関数に分割
 def validate_input(data):
+    """入力データのバリデーション"""
     # バリデーションロジック
-    pass
+    if not data:
+        raise ValueError("データが空です")
+    return data
 
 def transform_data(data):
+    """データの変換処理"""
     # 変換ロジック
-    pass
+    return [item.upper() for item in data]
 
 def save_data(data):
+    """データの保存処理"""
     # 保存ロジック
-    pass
+    print(f"保存されました: {data}")
 
 def process_data(raw_data):
-    validated_data = validate_input(raw_data)
-    transformed_data = transform_data(validated_data)
-    save_data(transformed_data)
+    """データ処理のメイン関数"""
+    # 各ステップを組み合わせて処理
+    validated_data = validate_input(raw_data)    # 検証
+    transformed_data = transform_data(validated_data)  # 変換
+    save_data(transformed_data)                  # 保存
     return transformed_data
 
-# 2. 設定可能なパラメータ
+# 2. 設定可能なパラメータ（高階関数）
 def create_processor(validator, transformer, saver):
+    """処理関数を組み合わせてカスタム処理器を作成"""
     def process(data):
+        # 3つの処理を順番に実行
         return saver(transformer(validator(data)))
     return process
 
@@ -294,11 +360,21 @@ def create_processor(validator, transformer, saver):
 from functools import partial
 
 def process_with_config(validator_config, transformer_config):
+    """設定に基づいて処理器を部分適用で作成"""
     return partial(
         create_processor,
-        validator=create_validator(validator_config),
-        transformer=create_transformer(transformer_config)
+        validator=create_validator(validator_config),     # 検証器を設定
+        transformer=create_transformer(transformer_config)  # 変換器を設定
     )
+
+# 使用例
+def create_validator(config):
+    """設定に基づいてバリデータを作成"""
+    return lambda data: validate_input(data)
+
+def create_transformer(config):
+    """設定に基づいて変換器を作成"""
+    return lambda data: transform_data(data)
 ```
 
 ### 次のステップ
